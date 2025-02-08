@@ -1,10 +1,10 @@
 use json;
-use json::object;
 use reqwest;
-use std::mem::ManuallyDrop;
 
+#[derive(Debug)]
 struct JsonRpcErrorDataContext {}
 
+#[derive(Debug)]
 struct JsonRpcErrorData {
     name: String,
     debug: String,
@@ -13,6 +13,7 @@ struct JsonRpcErrorData {
     context: JsonRpcErrorDataContext,
 }
 
+#[derive(Debug)]
 struct JsonRpcError {
     code: u32,
     message: String,
@@ -57,11 +58,23 @@ impl Into<json::JsonValue> for JsonRpcRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct JsonRpcResponse {
     jsonrpc: String,
     result: Option<json::JsonValue>,
     error: Option<JsonRpcError>,
     id: u32,
+}
+
+impl From<Result<json::JsonValue, json::JsonError>> for JsonRpcResponse {
+    fn from(result: Result<json::JsonValue, json::JsonError>) -> JsonRpcResponse {
+        JsonRpcResponse {
+           jsonrpc: "2.0".to_string(),
+           id: 0,
+           result: result.ok(),
+           error: None,
+        }
+    }
 }
 
 pub struct JsonRpcClient {
@@ -77,7 +90,7 @@ impl JsonRpcClient {
         }
     }
 
-    pub async fn send(self, request: JsonRpcRequest) -> Result<(), reqwest::Error>  {
+    pub async fn send(self, request: JsonRpcRequest) -> Result<JsonRpcResponse, reqwest::Error>  {
         let resp = self
             .client
             .post(self.url)
@@ -86,8 +99,14 @@ impl JsonRpcClient {
             .body(json::stringify(request))
             .send().await?;
 
-        println!("{:?}", resp);
+        let resp_body = resp.text_with_charset("UTF8").await?;
+        //println!("{:?}", &resp_body);
 
-        Ok(())
+        let resp_object = json::parse(resp_body.as_str());
+        let desirialized: JsonRpcResponse = resp_object.into();
+
+        println!("{:?}", desirialized);
+
+        Ok(desirialized)
     }
 }
