@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use json;
 use reqwest;
 
@@ -20,6 +22,7 @@ struct JsonRpcError {
     data: Option<JsonRpcErrorData>,
 }
 
+#[derive(Debug)]
 pub struct JsonRpcRequest {
     jsonrpc: String,
     method: String,
@@ -62,17 +65,42 @@ impl Into<json::JsonValue> for JsonRpcRequest {
 pub struct JsonRpcResponse {
     jsonrpc: String,
     result: Option<json::JsonValue>,
-    error: Option<JsonRpcError>,
+    error: Option<json::JsonValue>,
     id: u32,
 }
 
+//impl From<Result<json::JsonValue, json::JsonError>> for JsonRpcResponse {
+//    fn from(result: Result<json::JsonValue, json::JsonError>) -> JsonRpcResponse {
+//        let mut entries = result.ok().unwrap().e
+//        entries.g
+//        JsonRpcResponse {
+//           jsonrpc: "2.0".to_string(),
+//           id: 0,
+//           result: result.ok().unwrap().as,
+//           error: None,
+//        }
+//    }
+//}
+
 impl From<Result<json::JsonValue, json::JsonError>> for JsonRpcResponse {
     fn from(result: Result<json::JsonValue, json::JsonError>) -> JsonRpcResponse {
-        JsonRpcResponse {
-           jsonrpc: "2.0".to_string(),
-           id: 0,
-           result: result.ok(),
-           error: None,
+        match result {
+            Ok(json_value) => {
+                //let result_value: HashMap<String, json::JsonValue> = json_value.into(); // Extract the "result" key
+
+                JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: 0,
+                    result: Some(json_value["result"].clone()), // Use the extracted result
+                    error: Some(json_value["error"].clone()),
+                }
+            }
+            Err(err) => JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: 0,
+                result: None,
+                error: None, // Convert error to string
+            },
         }
     }
 }
@@ -90,14 +118,17 @@ impl JsonRpcClient {
         }
     }
 
-    pub async fn send(self, request: JsonRpcRequest) -> Result<JsonRpcResponse, reqwest::Error>  {
+    pub async fn send(self, request: JsonRpcRequest) -> Result<JsonRpcResponse, reqwest::Error> {
+        //println!("{:?}", json::stringify(request));
+
         let resp = self
             .client
             .post(self.url)
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .header(reqwest::header::ACCEPT, "application/json")
             .body(json::stringify(request))
-            .send().await?;
+            .send()
+            .await?; 
 
         let resp_body = resp.text_with_charset("UTF8").await?;
         //println!("{:?}", &resp_body);
