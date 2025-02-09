@@ -7,16 +7,14 @@ async fn main() {
     println!("Hello, world!");
 
     let params = object! {
-        "params": {
-          "service": "common",
-          "method": "authenticate",
-          "args": [ "{{database}}", "{{username}}", "{{password}}", {} ]
-        }
+        "service": "common",
+        "method": "authenticate",
+        "args": [ "bitnami_odoo", "user@example.com", "bitnami", {} ]
     };
     let req = jsonrpc::JsonRpcRequest::from(Some(params), 0);
     let client = jsonrpc::JsonRpcClient::new(String::from("http://localhost:80/jsonrpc"));
 
-    let _resp = client.send(req).await; 
+    let _resp = client.send(req).await;
 }
 
 #[cfg(test)]
@@ -67,15 +65,12 @@ mod tests {
     #[test]
     fn jsonrpc_test() {
         let params = object! {
-            "params": {
-              "service": "common",
-              "method": "authenticate",
-              "args": [ "{{database}}", "{{username}}", "{{password}}", {} ]
-            }
+            "service": "common",
+            "method": "authenticate",
+            "args": [ "bitnami_odoo", "user@example.com", "bitnami", {} ]
         };
         let req = jsonrpc::JsonRpcRequest::from(Some(params), 0);
-        let client =
-            jsonrpc::JsonRpcClient::new(String::from("http://localhost:80/jsonrpc"));
+        let client = jsonrpc::JsonRpcClient::new(String::from("http://localhost:80/jsonrpc"));
 
         _ = client.send(req);
     }
